@@ -10,18 +10,18 @@ import re
 class Day01:
     def __init__(self):
         self.input = None
-        self.digitLookup = dict(zero='0',
-                                one='1',
-                                two='2',
-                                three='3',
-                                four='4',
-                                five='5',
-                                six='6',
-                                seven='7',
-                                eight='8',
-                                nine='9')
+        self.digitLookup = dict(zero=0,
+                                one=1,
+                                two=2,
+                                three=3,
+                                four=4,
+                                five=5,
+                                six=6,
+                                seven=7,
+                                eight=8,
+                                nine=9)
         for i in range(10):
-            self.digitLookup[str(i)] = str(i)
+            self.digitLookup[str(i)] = i
 
         self.lines = []
         
@@ -42,8 +42,8 @@ class Day01:
             self.lines = input.read().strip().split('\n')
 
 
-    def Digit(self, match):
-        return self.digitLookup[match.group(1)]
+    def ToDigit(self, text):
+        return self.digitLookup[text]
     
     def Part1(self):
         total = 0
@@ -59,25 +59,13 @@ class Day01:
 
     def Part2(self):
         total = 0
-        digitsPat = r'(\d|zero|one|two|three|four|five|six|seven|eight|nine)'
-        firstPat = re.compile(r'^.*?' + digitsPat)
-        lastPat = re.compile(r'^.*' + digitsPat)
+        digits = r'(\d|zero|one|two|three|four|five|six|seven|eight|nine)'
+        firstPat = re.compile(rf'^.*?{digits}.*$')  # shortest seq then digit
+        lastPat  = re.compile(rf'^.*{digits}.*?$')  # longest seq then digit
         for n, line in enumerate(self.lines):
-            match = firstPat.search(line)
-            if not match:
-                print(f'Could not find first digit on line {n}: {line}')
-                continue
-
-            first = self.Digit(match)
-
-            match = lastPat.search(line)
-            if not match:
-                print(f'Could not find last digit on line {n}: {line}')
-                continue
-
-            last = self.Digit(match)
-
-            number = int(first + last)
+            firstDigit = self.ToDigit(firstPat.sub(r'\1', line))
+            lastDigit = self.ToDigit(lastPat.sub(r'\1', line))
+            number = 10 * firstDigit + lastDigit
             #print (f'line {n:4d}: {number}: {line}')
             total += number
         return total
