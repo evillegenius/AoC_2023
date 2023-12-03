@@ -15,7 +15,6 @@ class Day03:
         self.stars = {}
 
         self.symbolPat = re.compile(r'[^.\d]')
-        self.starPat = re.compile(r'\*')
 
         self.ParseArgs()
         self.ParseInput()
@@ -59,10 +58,9 @@ class Day03:
         clampedStart = max(0, start-1)
         for r in (row-1, row, row+1):
             if 0 <= r < len(self.lines):
-                match = self.starPat.search(self.lines[r][clampedStart:end+1])
-                if match:
-                    starPos = (r, clampedStart + match.start(0))
-                    self.stars.setdefault(starPos, []).append(partNum)
+                starCol = self.lines[r].find('*', clampedStart, end+1)
+                if starCol != -1:
+                    self.stars.setdefault((r, starCol), []).append(partNum)
 
 
     def Part2(self):
