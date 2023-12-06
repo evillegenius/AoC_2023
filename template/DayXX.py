@@ -17,7 +17,7 @@ class DayXX:
         import argparse
 
         parser = argparse.ArgumentParser('DayXX')
-        parser.add_argument('input', nargs='?', default='input.txt')
+        parser.add_argument('input', nargs='?', default='input')
 
         parser.parse_args(args, self)
 
@@ -28,10 +28,12 @@ class DayXX:
 
 
     def Part1(self):
-        return 0
+        answer = 0
+        return answer
 
     def Part2(self):
-        return 0
+        answer = 0
+        return answer
     
 if __name__ == '__main__':
     problem = DayXX()
