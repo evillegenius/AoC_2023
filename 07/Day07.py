@@ -5,6 +5,15 @@
 import sys
 import collections
 
+# Mnemonic hand ranks
+rankHighCard = 1
+rankOnePair = 2
+rankTwoPairs = 3
+rankThreeOfAKind = 4
+rankFullHouse = 5
+rankFourOfAKind = 6
+rankFiveOfAKind = 7
+
 class Day07:
     def __init__(self):
         self.input = None
@@ -35,23 +44,23 @@ class Day07:
         cards.update(hand)
         common = cards.most_common()
         counts = [item[1] for item in common]
-        maxCount = max(counts)
+        maxCount = counts[0]
         if maxCount == 1:
-            return (1, hand) # high card
+            return (rankHighCard, hand) # high card
         if maxCount == 5:
-            return (7, hand) # 5 of a kind
+            return (rankFiveOfAKind, hand) # 5 of a kind
         if maxCount == 4:
-            return (6, hand) # 4 of a kind
+            return (rankFourOfAKind, hand) # 4 of a kind
         if maxCount == 3:
             if counts[1] == 2:
-                return (5, hand) # full house
+                return (rankFullHouse, hand) # full house
             else:
-                return (4, hand) # 3 of a kind)
+                return (rankThreeOfAKind, hand) # 3 of a kind)
         if maxCount == 2:
             if counts[1] == 2:
-                return (3, hand) # 2 pair
+                return (rankTwoPairs, hand) # 2 pair
             else:
-                return (2, hand) # 1 pair
+                return (rankOnePair, hand) # 1 pair
         assert False, f"Hand failed ranking {game}"
 
     def Part1(self):
@@ -71,42 +80,46 @@ class Day07:
         counts = [item[1] for item in common]
         jokers = cards['0']
 
-        maxCount = max(counts)
-        if maxCount == 1:
-            return (1 + jokers, hand) # high card
-        if maxCount == 5:
-            return (7, hand) # 5 of a kind
-        if maxCount == 4:
-            if common[0][0] == '0':
-                return (7, hand) # 5 of a kind
-            else:
-                return (6 + jokers, hand) # 4 of a kind
-        if maxCount == 3:
-            if common[0][0] == '0':
-                return (5 + counts[1], hand)
+        if counts == [5]:
+            return (rankFiveOfAKind, hand)
+
+        if counts == [4, 1]:
             if jokers:
-                return(5 + jokers, hand)
-            if counts[1] == 2:
-                return (5, hand) # full house
+                return (rankFiveOfAKind, hand)
             else:
-                return (4, hand) # 3 of a kind)
-        if maxCount == 2:
-            if jokers == 1:
-                if counts == [2, 2, 1]:
-                    return (5, hand) # full house
-                else:
-                    return (4, hand) # 3 of a kind
-                assert False, f'Bad joker count: {game}'
+                return (rankFourOfAKind, hand)
+
+        if counts == [3, 2]:
+            if jokers:
+                return (rankFiveOfAKind, hand)
+            else:
+                return (rankFullHouse, hand)
+            
+        if counts == [3, 1, 1]:
+            if jokers:
+                return (rankFourOfAKind, hand)
+            else:
+                return (rankThreeOfAKind, hand)
+            
+        if counts == [2, 2, 1]:
             if jokers == 2:
-                if counts == [2, 2, 1]:
-                    return (6, hand) # 4 of a kind
-                else:
-                    return (4, hand) # 3 of a kind
-                assert False, f'Another bad joker count: {game}'
-            if counts[1] == 2:
-                return (3, hand) # 2 pair
+                return (rankFourOfAKind, hand)
+            elif jokers == 1:
+                return (rankFullHouse, hand)
             else:
-                return (2, hand) # 1 pair
+                return (rankTwoPairs, hand)
+            
+        if counts == [2, 1, 1, 1]:
+            if jokers:
+                return (rankThreeOfAKind, hand)
+            else:
+                return (rankOnePair, hand)
+
+        if counts == [1, 1, 1, 1, 1]:
+            if jokers:
+                return (rankOnePair, hand)
+            else:
+                return (rankHighCard, hand)
         assert False, f"Hand failed ranking {game}"
 
     def Part2(self):
