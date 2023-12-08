@@ -59,35 +59,55 @@ class Day08:
         n = 0
         node = nodes[n]
         count = counts[n]
-        while True:
-            numDir = len(self.directions)
-            while node[2] != 'Z':
+        cycles = []
+
+        numDir = len(self.directions)
+        for n, node in enumerate(nodes):
+            lastZ = node
+            count = 0
+            zs = []
+            while True:
                 node = self.network[node][self.directions[count % numDir]]
                 count += 1
+                if node[2] == 'Z':
+                    lastZ = node
+                    zs.append((node, count))
+                    print(f'{nodes[n]}: {node}, {count}')
+                if node == nodes[n] or node == lastZ:
+                    cycles.append(zs)
+                    break
+        import pprint
+        pprint.pprint(cycles)
+        import math
+        answer = math.lcm(*[z[-1][1] for z in cycles])
 
-            nodes[n] = node
-            counts[n] = count
-
-            print(f'counts[{n}] = {count}')
-            # print(f'nodes = {nodes}')
-            # print(f'counts = {counts}')
-
-            minCount = min(counts)
-            maxCount = max(counts)
-
-            if minCount == maxCount:
-                break
-
-            n = counts.index(minCount)
-            node = nodes[n]
-            count = counts[n]
-
-            # Take 1 step
-            node = self.network[node][self.directions[count % numDir]]
-            count += 1
-
-        answer = minCount
         return answer
+
+        #     cycles.append(zs)
+
+        #     nodes[n] = node
+        #     counts[n] = count
+
+        #     print(f'counts[{n}] = {count}')
+        #     # print(f'nodes = {nodes}')
+        #     # print(f'counts = {counts}')
+
+        #     minCount = min(counts)
+        #     maxCount = max(counts)
+
+        #     if minCount == maxCount:
+        #         break
+
+        #     n = counts.index(minCount)
+        #     node = nodes[n]
+        #     count = counts[n]
+
+        #     # Take 1 step
+        #     node = self.network[node][self.directions[count % numDir]]
+        #     count += 1
+
+        # answer = minCount
+        # return answer
     
 if __name__ == '__main__':
     problem = Day08()
