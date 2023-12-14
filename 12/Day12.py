@@ -53,7 +53,7 @@ class Day12:
     def CountMatches(self, grid, counts):
         # Pad grid to aid with matching
         grid = ' ' + grid + ' '
-        print(f'{grid}  {counts}')
+        # print(f'{grid}  {counts}')
         # offset to the next group (or end)
         deltas = [count + 1 for count in counts]
         start = 1
@@ -79,16 +79,17 @@ class Day12:
                     break
             else:
                 update = len(counts) - 1
-                matches += 1
+                if '#' not in grid[prev:]:
+                    matches += 1
 
-                # XXX debugging
-                result = ''
-                for i in indices:
-                    result += '.' * (starts[i] - len(result))
-                    result += '#' * (counts[i])
-                result += '.' * (len(grid) - len(result))
-                print(f' {result[1:-1]}   {starts}')
-                # XXX end debugging
+                    # # XXX debugging
+                    # result = ''
+                    # for i in indices:
+                    #     result += '.' * (starts[i] - len(result))
+                    #     result += '#' * (counts[i])
+                    # result += '.' * (len(grid) - len(result))
+                    # print(f' {result[1:-1]}   {starts}')
+                    # # XXX end debugging
 
             while update >= 0:
                 starts[update] += 1
@@ -103,27 +104,27 @@ class Day12:
             else:
                 break
 
-        print(f'  -> {matches}\n')
+        # print(f'  -> {matches}\n')
         return matches
-
-
-
-
-            
-
-
-
 
 
     def Part1(self):
         answer = 0
         for grid, counts in zip(self.grids, self.counts):
-            answer += self.CountMatches(grid, counts)
+            matches = self.CountMatches(grid, counts)
+            answer += matches
         return answer
+
 
     def Part2(self):
         answer = 0
+        for row, (grid, counts) in enumerate(zip(self.grids, self.counts)):
+            grid5 = '?'.join([grid] * 5)
+            counts5 = counts * 5
 
+            matches = self.CountMatches(grid5, counts5)
+            print(f'{row:4d}: {grid} -> {matches}', flush=True)
+            answer += matches
         return answer
     
 if __name__ == '__main__':
