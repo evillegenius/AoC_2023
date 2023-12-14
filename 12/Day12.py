@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
 """
-<Problem description here>
+Advent of Code 2023, Day 12
 """
-import sys
-import itertools
 import re
-
-def Alternate(seq1, seq2):
-    a = iter(seq1)
-    b = iter(seq2)
-    try:
-        while True:
-            yield next(a)
-            yield next(b)
-    except StopIteration:
-        return
-
+import functools
 
 class Day12:
     def __init__(self):
@@ -24,12 +12,15 @@ class Day12:
         self.lines = []
 
         self.patterns = [
-            re.compile(rf'^[. ?][#?]{{{n}}}[. ?]?$')
+            re.compile(rf'(^|(?<=[^#]))'  # preceded by beginning or not '#'
+                       rf'([#?]{{{n}}})'  # exactly n '#' or '?'
+                       rf'((?=[^#])|$)')  # followed by not '#' or end
             for n in range(20)
         ]
         
         self.ParseArgs()
         self.ParseInput()
+
 
     def ParseArgs(self, args=None):
         import argparse
@@ -46,87 +37,86 @@ class Day12:
 
         self.grids = [line.split()[0]
                        for line in self.lines]
-        self.counts = [list(map(int, line.split()[1].split(',')))
+        self.counts = [tuple(map(int, line.split()[1].split(',')))
                        for line in self.lines]
 
-        
+    # functools.cache for the win! It creates a decorated version of the method that
+    # memoizes its input and outputs. If the same input arguments are provided again
+    # it simply returns them. This is *huge* for a recursive method since it also
+    # short circuits all the recursive calls.
+    @functools.cache
     def CountMatches(self, grid, counts):
-        # Pad grid to aid with matching
-        grid = ' ' + grid + ' '
-        # print(f'{grid}  {counts}')
-        # offset to the next group (or end)
-        deltas = [count + 1 for count in counts]
-        start = 1
-        starts = []
-        # Counts, deltas, and starts all have the same length
-        indices = tuple(range(len(counts)))
-        for i in indices:
-            starts.append(start)
-            start += deltas[i]
+        matchCount = 0
 
-        matches = 0
-        while True:
-            update = -1
-            prev = 0
-            for i in indices:
-                if (self.patterns[counts[i]].match(grid[starts[i]-1:starts[i] + deltas[i]]) and
-                    '#' not in grid[prev:starts[i]]):
-                    # this one could work, see if we skipped over a #
-                    prev = starts[i] + counts[i]
-                    continue # to the next index
-                else:
-                    update = i
+        if not counts and '#' not in grid:
+            # Empty counts matches a string without #
+            return 1
+        elif not grid or not counts:
+            return 0
+
+        count = counts[0]
+
+        # Cannot start a match if there's less than this much space in grid
+        lastStart = len(grid) - sum(counts) - len(counts[1:])
+        lastEnd = lastStart + count
+
+        searchStart = 0
+        while searchStart <= lastStart:
+            # There appears to be a bug in the start, end parameters of re.search
+            # when combined with look behind and look ahead assertions. A look
+            # behind assertion like (?<=[^#]) will happily look at the string
+            # contents before the start value, but a look ahead assertion like
+            # (?=^[#]) will not look after the end parameter. Instead it appears
+            # to treat the end parameter as if it were really the end of the
+            # string.
+            # 
+            # To work around this, I'm using lastEnd+1 so the search always
+            # includes the character one past the last possible ending point
+            # of the current group so there's something to match that look
+            # ahead assertion against.
+            match = self.patterns[count].search(grid, searchStart, lastEnd + 1)
+            if match:
+                foundStart = match.start(2) # where the group started
+
+                # If we're searching after a '#' then the match is invalid.
+                if '#' in grid[:foundStart]:
                     break
+
+                # Recurse
+                matchCount += self.CountMatches(grid[foundStart + count + 1:], counts[1:])
+
+                # Start the next search one past the start of this search.
+                searchStart = foundStart + 1
             else:
-                update = len(counts) - 1
-                if '#' not in grid[prev:]:
-                    matches += 1
-
-                    # # XXX debugging
-                    # result = ''
-                    # for i in indices:
-                    #     result += '.' * (starts[i] - len(result))
-                    #     result += '#' * (counts[i])
-                    # result += '.' * (len(grid) - len(result))
-                    # print(f' {result[1:-1]}   {starts}')
-                    # # XXX end debugging
-
-            while update >= 0:
-                starts[update] += 1
-                for i in indices[update+1:]:
-                    starts[i] = starts[i-1] + deltas[i-1]
-
-                if starts[-1] + deltas[-1] > len(grid):
-                    update -= 1
-                    continue
-                else:
-                    break
-            else:
+                # We did not find any (more) matches for this group. We're done.
                 break
 
-        # print(f'  -> {matches}\n')
-        return matches
+        # print(f'{grid} {",".join(map(str, counts))} -> {matchCount}')
+        return matchCount
 
 
     def Part1(self):
         answer = 0
         for grid, counts in zip(self.grids, self.counts):
-            matches = self.CountMatches(grid, counts)
-            answer += matches
+            answer += self.CountMatches(grid, counts)
+            self.CountMatches.cache_clear()
         return answer
 
 
     def Part2(self):
         answer = 0
-        for row, (grid, counts) in enumerate(zip(self.grids, self.counts)):
-            grid5 = '?'.join([grid] * 5)
-            counts5 = counts * 5
-
-            matches = self.CountMatches(grid5, counts5)
-            print(f'{row:4d}: {grid} -> {matches}', flush=True)
-            answer += matches
+        for grid, counts in zip(self.grids, self.counts):
+            grid = '?'.join([grid]*5)
+            counts = counts * 5
+            # print('='*80)
+            result = self.CountMatches(grid, counts)
+            # print(f'{grid}  {counts} -> {result}')
+            answer += result
+            # Reset the memoization cache
+            self.CountMatches.cache_clear()
         return answer
-    
+
+
 if __name__ == '__main__':
     problem = Day12()
     
