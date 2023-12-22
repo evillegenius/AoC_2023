@@ -3,12 +3,15 @@
 <Problem description here>
 """
 import sys
+import re
+import numpy as np
 
 class DayXX:
     def __init__(self):
         self.input = None
 
         self.lines = []
+        self.grid = None
         
         self.ParseArgs()
         self.ParseInput()
@@ -25,6 +28,19 @@ class DayXX:
     def ParseInput(self):
         with open(self.input) as input:
             self.lines = input.read().strip().split('\n')
+
+        ########################################################################
+        # If the puzzle is not grid/map based, delete these lines.
+        gridKey = {'.': 0, '#': 1, 'O': 2}
+        self.height = len(self.lines)
+        self.width = len(self.lines[0])
+
+        self.grid = np.zeros((self.height, self.width), dtype=int)
+        for row, line in enumerate(self.lines):
+            for col, ch in enumerate(line):
+                self.grid[row, col] = gridKey[ch]
+        #
+        ########################################################################
 
 
     def Part1(self):
