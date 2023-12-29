@@ -47,17 +47,19 @@ class Pos(namedtuple('Pos', 'row col')):
 
     
 class Connection:
-    id: int = 0
-    def __init__(self, node1, node2, score):
+    id: int = 1
+    def __init__(self, node1, node2, score, firstPos = None, lastPos = None):
         self.node1 = node1
         self.node2 = node2
         self.score = score
+        self.firstPos = firstPos
+        self.lastPos = lastPos
         self.id = Connection.id
         Connection.id += 1
 
         self.available = bool(self.node1) and bool(self.node2)
         self.traversed = False
-        print(repr(self))
+        # print(repr(self))
 
     def OtherNode(self, node):
         if node == self.node1: return self.node2
@@ -65,16 +67,21 @@ class Connection:
         else: assert False, "OtherNode called with invalid node"
 
     def __repr__(self):
-        return f'Connection(id={self.id}, {self.node1} -> {self.node2}, score={self.score})'
+        return (f'Connection(id={self.id}, {self.node1} -> {self.node2}, score={self.score},\n'
+                f'           firstPos={self.firstPos}, lastPos={self.lastPos})')
 
 
 class Node:
+    id: int = 1
     def __init__(self, pos):
         self.pos = pos
         self.connections = []
         self.available = True
         self.traversed = False
-        print(repr(self))
+
+        self.id = Node.id
+        Node.id += 1
+        # print(repr(self))
 
     def __repr__(self):
         return f'Node({self.pos}, connections={self.connections}, available={self.available})'
@@ -89,6 +96,8 @@ class Day23:
 
         self.lines = []
         self.grid = None
+
+        self.pathFile = None # debug
         
         self.ParseArgs()
         self.ParseInput()
@@ -103,6 +112,12 @@ class Day23:
         parser.add_argument('input', nargs='?', default='input')
 
         parser.parse_args(args, self)
+
+        if not os.path.isfile(self.input):
+            sourceDir = os.path.dirname(__file__)
+            sourceInput = os.path.join(sourceDir, self.input)
+            if os.path.isfile(sourceInput):
+                self.input = sourceInput
 
 
     def ParseInput(self):
@@ -187,9 +202,13 @@ class Day23:
 
     def Follow(self, choices, visited, startPos, dir):
         count = 0
+        positions = []
         pos = startPos + dir
         visited[pos] = True
+        positions.append(pos)
+        firstPos = pos  # debug
         while choices[pos] == 2:
+            lastPos = pos # debug
             count += 1
             for dir in (NORTH, SOUTH, EAST, WEST):
                 if choices[pos + dir] == 2:
@@ -197,6 +216,7 @@ class Day23:
                         # Found the next step.
                         pos += dir
                         visited[pos] = True
+                        positions.append(pos)
                         break
                 elif choices[pos + dir] != 0:
                     if pos + dir == startPos:
@@ -208,7 +228,7 @@ class Day23:
             else:
                 # End of the line. This path is a dead end. Create an unavailable
                 # connection
-                connection = Connection(startNode, None, 0)
+                connection = Connection(startNode, None, 0, firstPos, None)
                 return connection
             
         endPos = pos
@@ -216,7 +236,9 @@ class Day23:
         startNode = self.nodes[startPos]
         endNode = self.nodes[endPos]
 
-        connection = Connection(startNode, endNode, count)
+        connection = Connection(startNode, endNode, count, firstPos, lastPos)
+        indices = np.array(positions)
+        self.connectionMap[tuple(indices.T)] = connection.id
         return connection
 
             
@@ -247,6 +269,8 @@ class Day23:
         # then zero (by multiplication) the results for walls, keeping only
         # the number of choices for each path point.
         choices = sp.signal.convolve2d(grid, plus, mode='same') * grid
+        self.connectionMap = np.zeros(grid.shape, dtype=int)
+        self.nodeMap = np.zeros(grid.shape, dtype=int)
 
         # Choices looks like:
         #
@@ -277,6 +301,7 @@ class Day23:
                 self.startNode = self.nodes[pos]
             elif pos.row == self.height - 1:
                 self.endNode = self.nodes[pos]
+            self.nodeMap[pos] = self.nodes[pos].id
 
         # Everything between the nodes is a single path find them
         visited = np.zeros(grid.shape, dtype=bool)
@@ -298,25 +323,38 @@ class Day23:
                         connection.node2.connections.append(connection)
 
         # Now there is a much smaller set of things to traverse.
+        np.savetxt('/tmp/connectionMap.txt', self.connectionMap, fmt='%2d')
+        np.savetxt('/tmp/nodeMap.txt', self.nodeMap, fmt='%2d')
 
-        for nodePos, node in self.nodes.items():
-            print(f'{nodePos} -> {node}', end=' ')
-
-            if nodePos.row == 0:
-                self.startNode = node
-                print('(start)')
-            elif nodePos.row == self.height - 1:
-                self.endNode = node
-                print('(end)')
-            else:
-                print()
-
-        answer = self.TraverseNodes(self.startNode)
+        answer = self.TraverseNodes(self.startNode) - 1
         return answer
     
-    def TraverseNodes(self, node):
+    def DebugPath(self, path):
+        if self.pathFile is None:
+            self.pathFile = open('/tmp/paths.txt', 'w')
+        total = 0
+        for i in range(0, len(path), 2):
+            node = path[i]
+            score = 1
+            total += score
+            print(f'{score:5d} {total:5d}: Node {node.pos}', file=self.pathFile)
+            if i + 1 >= len(path):
+                break
+            conn = path[i + 1]
+            total += conn.score
+            print(f'{conn.score:5d} {total:5d}: Conn {conn.firstPos} - {conn.lastPos}', file=self.pathFile)
+
+        print(f'Total = {total}\n', file=self.pathFile)
+
+
+    def TraverseNodes(self, node, path=[]):
+    # def TraverseNodes(self, node):
         assert node.available, f"Node {node!r} is unavailable!"
-        if node == self.endNode: return 1
+        path.append(node)
+        if node == self.endNode:
+            self.DebugPath(path)
+            path.pop()
+            return 1
 
         node.available = False
 
@@ -333,10 +371,15 @@ class Day23:
                 continue
             
             otherNode = conn.OtherNode(node)
+            if otherNode.available:
+                path.append(conn)
+                scores[i] += conn.score + self.TraverseNodes(otherNode) # path=path)
+                path.pop()
 
-            scores[i] += self.TraverseNodes(otherNode)       
-
-        score = max(scores) + 1 # 1 for the node itself
+        if any(scores):
+            score = max(scores) + 1 # 1 for the node itself
+        else:
+            score = 0
 
         # Restore the available state
         for i, conn in enumerate(node.connections):
@@ -344,6 +387,7 @@ class Day23:
 
         node.available = True
 
+        path.pop()
         return score
 
 if __name__ == '__main__':
